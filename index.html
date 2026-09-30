@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casa Remanso - POS & Mesas</title>
+    
+    <!-- Fuentes: Playfair Display para títulos, Inter para interfaz -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    colors: {
+                        sage: '#A3B19B',
+                        mist: '#C2CCCE',
+                        honey: '#E0AC69',
+                        terracotta: '#C06E52',
+                        blush: '#E2B8B9',
+                        linen: '#E5DDD4',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #E5DDD4; /* bg-linen */
+            color: #2d3748; /* dark gray para legibilidad */
+        }
+
+        /* Scrollbar estilizado con los colores de la paleta */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #C2CCCE; /* bg-mist */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #A3B19B; /* bg-sage */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #E0AC69; /* bg-honey */
+        }
+
+        /* Indicador de mesa activa */
+        .mesa-activa {
+            outline: 4px solid #E0AC69; /* outline-honey */
+            outline-offset: 4px;
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-white border-b-[8px] border-mist shadow-sm flex-shrink-0 relative z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-serif font-bold text-terracotta tracking-wide">Casa Remanso</h1>
+                <span class="text-sm font-medium text-sage uppercase tracking-widest">Panadería & Café</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-bold text-gray-700">Turno Actual</p>
+                    <p class="text-xs text-gray-500" id="reloj">12:00 PM</p>
+                </div>
+                <div class="w-10 h-10 bg-blush rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm">
+                    <i class="ph-fill ph-user text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row overflow-hidden max-w-7xl mx-auto w-full">
+        
+        <!-- Contenedor Izquierdo: Mesas y Menú -->
+        <div class="flex-grow flex flex-col overflow-y-auto w-full lg:w-2/3 p-4 md:p-6 gap-6 pb-32 lg:pb-6">
+            
+            <!-- Sección de Mesas -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-mist">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-serif font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-armchair text-honey"></i> Vista de Mesas
+                    </h2>
+                    <div class="flex gap-4 text-xs font-semibold">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-sage"></span> Libres</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-terracotta"></span> Ocupadas</span>
+                    </div>
+                </div>
+                <!-- Grid de Mesas -->
+                <div id="grid-mesas" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- Las mesas se inyectarán por JS -->
+                </div>
+            </section>
+
+            <!-- Sección de Menú -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-mist flex-grow flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-mist pb-2">
+                    <h2 class="text-xl font-serif font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-croissant text-honey"></i> Menú
+                    </h2>
+                    <p id="aviso-mesa" class="text-xs font-bold text-terracotta bg-red-50 px-2 py-1 rounded animate-pulse">
+                        Selecciona una mesa primero
+                    </p>
+                </div>
+                
+                <!-- Grid de Productos -->
+                <div id="grid-productos" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 opacity-50 pointer-events-none transition-opacity duration-300">
+                    <!-- Los productos se inyectarán por JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Contenedor Derecho: Comanda de la Mesa -->
+        <aside class="w-full lg:w-1/3 bg-white border-l border-mist shadow-xl flex flex-col fixed lg:relative bottom-0 lg:bottom-auto h-[60vh] lg:h-full rounded-t-3xl lg:rounded-none transition-transform duration-300 z-30 translate-y-full lg:translate-y-0" id="panel-comanda">
+            
+            <!-- Handle mobile -->
+            <div class="w-full h-8 flex justify-center items-center lg:hidden cursor-pointer bg-mist/30 rounded-t-3xl" id="btn-toggle-panel">
+                <div class="w-12 h-1.5 bg-mist rounded-full"></div>
+            </div>
+
+            <!-- Cabecera de Comanda -->
+            <div class="p-5 bg-blush/20 border-b border-mist flex-shrink-0">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-bold font-serif text-terracotta" id="comanda-titulo">Seleccione Mesa</h2>
+                        <div class="flex items-center gap-3 mt-1 text-sm font-medium text-gray-600">
+                            <span class="flex items-center gap-1 bg-white px-2 py-0.5 rounded-full border border-mist shadow-sm">
+                                <i class="ph-fill ph-users text-sage"></i> <span id="comanda-pax">0</span> Pax
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Pedidos -->
+            <div class="flex-grow overflow-y-auto p-4 bg-linen/30" id="comanda-lista">
+                <!-- Estado vacío -->
+                <div class="h-full flex flex-col items-center justify-center text-gray-400 gap-3" id="comanda-vacia">
+                    <i class="ph-light ph-receipt text-5xl text-mist"></i>
+                    <p class="text-center text-sm font-medium">La comanda está vacía.<br>Agregue productos del menú.</p>
+                </div>
+                <!-- Items se inyectan acá -->
+            </div>
+
+            <!-- Footer de Comanda (Totales y Acción) -->
+            <div class="p-5 bg-white border-t border-mist flex-shrink-0">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="text-gray-500 font-bold uppercase tracking-wider text-sm">Subtotal</span>
+                    <span class="text-3xl font-black text-gray-800" id="comanda-total">$0.00</span>
+                </div>
+                
+                <button id="btn-cerrar-cuenta" class="w-full py-3.5 bg-terracotta text-white font-bold uppercase tracking-widest rounded-xl hover:bg-red-700 transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="ph-bold ph-check-square-offset text-xl"></i> Cerrar Cuenta
+                </button>
+            </div>
+        </aside>
+
+        <!-- Botón flotante Mobile -->
+        <button id="btn-fab" class="lg:hidden fixed bottom-6 right-6 bg-terracotta text-white p-4 rounded-full shadow-xl z-20 flex items-center gap-2">
+            <i class="ph-bold ph-receipt text-2xl"></i>
+        </button>
+    </main>
+
+    <!-- Modal: Cuántas personas -->
+    <div id="modal-pax" class="fixed inset-0 bg-gray-900/40 z-50 hidden flex items-center justify-center backdrop-blur-sm opacity-0 transition-opacity duration-200">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-xs w-full mx-4 border-t-8 border-sage transform scale-95 transition-transform duration-200" id="modal-pax-content">
+            <h3 class="text-xl font-serif font-bold text-gray-800 text-center mb-1" id="modal-titulo">Abrir Mesa</h3>
+            <p class="text-gray-500 text-sm text-center mb-6">¿Cuántas personas se sentarán?</p>
+            
+            <div class="flex items-center justify-center gap-4 mb-8">
+                <button id="btn-pax-menos" class="w-12 h-12 rounded-full bg-mist/30 text-terracotta text-xl font-bold flex items-center justify-center hover:bg-mist transition-colors">-</button>
+                <span id="pax-contador" class="text-4xl font-black text-gray-800 w-12 text-center">2</span>
+                <button id="btn-pax-mas" class="w-12 h-12 rounded-full bg-mist/30 text-sage text-xl font-bold flex items-center justify-center hover:bg-mist transition-colors">+</button>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btn-cancelar-pax" class="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-mist transition-colors">Cancelar</button>
+                <button id="btn-confirmar-pax" class="flex-1 py-2.5 bg-sage text-white font-bold rounded-lg hover:bg-honey transition-colors">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE DE DATOS Y ESTADO ---
+        
+        // 6 Mesas (Requisito)
+        const mesas = Array.from({ length: 6 }, (_, i) => ({
+            id: i + 1,
+            estado: 'libre', // 'libre' (sage) o 'ocupada' (terracotta)
+            pax: 0,
+            pedidos: [] // Array de { producto, cantidad }
+        }));
+
+        let mesaActivaId = null; // ID de la mesa seleccionada
+
+        // Menú con las URLs exactas proporcionadas
+        const menu = [
+            { id: 1, nombre: 'Pan Artesanal Campesino', categoria: 'Panadería', precio: 4.50, img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&q=80' },
+            { id: 2, nombre: 'Croissant Mantequilla', categoria: 'Panadería', precio: 2.80, img: 'https://images.unsplash.com/photo-1555507036-ab1e4006aaeb?w=600&q=80' },
+            { id: 3, nombre: 'Postre de Frutos y Dulces', categoria: 'Dulces', precio: 3.50, img: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=600&q=80' },
+            { id: 4, nombre: 'Sándwich Rústico Fresco', categoria: 'Salados', precio: 6.00, img: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&q=80' },
+            { id: 5, nombre: 'Café de Origen', categoria: 'Bebidas', precio: 2.50, img: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=600&q=80' }
+        ];
+
+        // --- REFERENCIAS AL DOM ---
+        const ui = {
+            gridMesas: document.getElementById('grid-mesas'),
+            gridProductos: document.getElementById('grid-productos'),
+            avisoMesa: document.getElementById('aviso-mesa'),
+            // Comanda
+            panelComanda: document.getElementById('panel-comanda'),
+            comandaTitulo: document.getElementById('comanda-titulo'),
+            comandaPax: document.getElementById('comanda-pax'),
+            comandaLista: document.getElementById('comanda-lista'),
+            comandaVacia: document.getElementById('comanda-vacia'),
+            comandaTotal: document.getElementById('comanda-total'),
+            btnCerrarCuenta: document.getElementById('btn-cerrar-cuenta'),
+            // Modal
+            modalPax: document.getElementById('modal-pax'),
+            modalContent: document.getElementById('modal-pax-content'),
+            modalTitulo: document.getElementById('modal-titulo'),
+            paxContador: document.getElementById('pax-contador'),
+            btnPaxMenos: document.getElementById('btn-pax-menos'),
+            btnPaxMas: document.getElementById('btn-pax-mas'),
+            btnCancelarPax: document.getElementById('btn-cancelar-pax'),
+            btnConfirmarPax: document.getElementById('btn-confirmar-pax'),
+            // Mobile
+            btnTogglePanel: document.getElementById('btn-toggle-panel'),
+            btnFab: document.getElementById('btn-fab'),
+            // Reloj
+            reloj: document.getElementById('reloj')
+        };
+
+        let mesaPorAbrir = null;
+        let paxActual = 2;
+
+        
+        function renderizarMesas() {
+            ui.gridMesas.innerHTML = '';
+            
+            mesas.forEach(mesa => {
+                const esLibre = mesa.estado === 'libre';
+                const esActiva = mesa.id === mesaActivaId;
+                
+                // Aplicar paleta de colores: Libre = Sage, Ocupada = Terracotta
+                const bgClase = esLibre ? 'bg-sage hover:bg-honey' : 'bg-terracotta';
+                const textClase = 'text-white';
+                const borderClase = esActiva ? 'mesa-activa' : 'border-transparent';
+
+                const divMesa = document.createElement('div');
+                divMesa.className = `cursor-pointer rounded-xl p-4 flex flex-col justify-between h-28 transition-all duration-200 border-2 shadow-sm ${bgClase} ${textClase} ${borderClase}`;
+                
+                // HTML interno de la tarjeta de la mesa
+                divMesa.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="font-serif font-bold text-lg">Mesa ${mesa.id}</span>
+                        ${!esLibre ? `<span class="bg-black/20 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><i class="ph-bold ph-users"></i> ${mesa.pax}</span>` : ''}
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <span class="text-sm font-medium opacity-90">${esLibre ? 'Disponible' : 'Ocupada'}</span>
+                        ${!esLibre ? `<span class="font-bold bg-white/20 px-2 py-1 rounded-lg text-xs">${mesa.pedidos.length} items</span>` : '<i class="ph-bold ph-plus-circle text-2xl opacity-70"></i>'}
+                    </div>
+                `;
+
+                divMesa.onclick = () => manejarClickMesa(mesa.id);
+                ui.gridMesas.appendChild(divMesa);
+            });
+        }
+
+        function renderizarProductos() {
+            ui.gridProductos.innerHTML = '';
+            
+            menu.forEach(prod => {
+                const divProd = document.createElement('div');
+                // Tarjetas con fondo Blush (como indicado) pero atenuado para legibilidad
+                divProd.className = 'bg-blush/20 border border-mist rounded-xl overflow-hidden hover:shadow-md hover:border-honey transition-all duration-200 cursor-pointer flex flex-col group';
+                
+                divProd.innerHTML = `
+                    <div class="h-32 w-full relative overflow-hidden bg-white">
+                        <img src="${prod.img}" alt="${prod.nombre}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-md font-bold text-gray-800 text-sm shadow-sm backdrop-blur-sm">
+                            $${prod.precio.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="p-3 flex-grow flex flex-col justify-between bg-white/50">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-terracotta tracking-wide">${prod.categoria}</span>
+                            <h3 class="font-bold text-sm text-gray-800 leading-tight mt-0.5">${prod.nombre}</h3>
+                        </div>
+                        <div class="mt-2 text-xs font-semibold text-sage flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="ph-bold ph-plus"></i> Añadir
+                        </div>
+                    </div>
+                `;
+                
+                divProd.onclick = () => agregarProductoALaMesa(prod);
+                ui.gridProductos.appendChild(divProd);
+            });
+        }
+
+
+        function manejarClickMesa(id) {
+            const mesa = mesas.find(m => m.id === id);
+            
+            if (mesa.estado === 'libre') {
+                // Abrir Modal
+                mesaPorAbrir = id;
+                paxActual = 2;
+                ui.paxContador.textContent = paxActual;
+                ui.modalTitulo.textContent = `Mesa ${id}`;
+                abrirModal();
+            } else {
+                // Seleccionar mesa ocupada
+                mesaActivaId = id;
+                actualizarInterfaz();
+                abrirPanelMobile();
+            }
+        }
+
+        function agregarProductoALaMesa(producto) {
+            if (!mesaActivaId) return; // Validación de seguridad
+            
+            const mesa = mesas.find(m => m.id === mesaActivaId);
+            const pedidoExistente = mesa.pedidos.find(p => p.producto.id === producto.id);
+            
+            if (pedidoExistente) {
+                pedidoExistente.cantidad++;
+            } else {
+                mesa.pedidos.push({ producto: producto, cantidad: 1 });
+            }
+            
+            // Efecto de feedback visual rápido en el grid
+            const gridItem = ui.gridMesas.children[mesaActivaId - 1];
+            gridItem.classList.add('scale-[0.98]');
+            setTimeout(() => gridItem.classList.remove('scale-[0.98]'), 150);
+
+            actualizarInterfaz();
+        }
+
+        function cambiarCantidad(productoId, delta) {
+            const mesa = mesas.find(m => m.id === mesaActivaId);
+            if (!mesa) return;
+
+            const index = mesa.pedidos.findIndex(p => p.producto.id === productoId);
+            if (index > -1) {
+                mesa.pedidos[index].cantidad += delta;
+                if (mesa.pedidos[index].cantidad <= 0) {
+                    mesa.pedidos.splice(index, 1); // Remover si llega a 0
+                }
+                actualizarInterfaz();
+            }
+        }
+
+
+        function actualizarInterfaz() {
+            renderizarMesas();
+
+            // Lógica habilitar/deshabilitar Menú
+            if (mesaActivaId) {
+                ui.gridProductos.classList.remove('opacity-50', 'pointer-events-none');
+                ui.avisoMesa.classList.add('hidden');
+            } else {
+                ui.gridProductos.classList.add('opacity-50', 'pointer-events-none');
+                ui.avisoMesa.classList.remove('hidden');
+            }
+
+            // Actualizar Comanda
+            if (mesaActivaId) {
+                const mesa = mesas.find(m => m.id === mesaActivaId);
+                ui.comandaTitulo.textContent = `Mesa ${mesa.id}`;
+                ui.comandaPax.textContent = mesa.pax;
+                
+                ui.comandaVacia.classList.add('hidden');
+                
+                // Limpiar lista preservando el div de "comanda vacia"
+                Array.from(ui.comandaLista.children).forEach(hijo => {
+                    if(hijo.id !== 'comanda-vacia') hijo.remove();
+                });
+
+                let total = 0;
+
+                mesa.pedidos.forEach(pedido => {
+                    const subtotalItem = pedido.producto.precio * pedido.cantidad;
+                    total += subtotalItem;
+
+                    const itemDOM = document.createElement('div');
+                    itemDOM.className = 'bg-white p-3 rounded-xl shadow-sm border border-mist mb-3 flex flex-col gap-2';
+                    itemDOM.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-gray-800 text-sm leading-tight pr-2">${pedido.producto.nombre}</span>
+                            <span class="font-bold text-terracotta whitespace-nowrap">$${subtotalItem.toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-xs text-sage font-semibold">$${pedido.producto.precio.toFixed(2)} c/u</span>
+                            <div class="flex items-center bg-mist/20 rounded-lg p-0.5 border border-mist/50">
+                                <button onclick="cambiarCantidad(${pedido.producto.id}, -1)" class="w-7 h-7 flex items-center justify-center bg-white rounded-md text-gray-600 shadow-sm hover:text-terracotta font-bold transition-colors">-</button>
+                                <span class="text-sm font-bold w-6 text-center text-gray-800">${pedido.cantidad}</span>
+                                <button onclick="cambiarCantidad(${pedido.producto.id}, 1)" class="w-7 h-7 flex items-center justify-center bg-white rounded-md text-gray-600 shadow-sm hover:text-sage font-bold transition-colors">+</button>
+                            </div>
+                        </div>
+                    `;
+                    ui.comandaLista.appendChild(itemDOM);
+                });
+
+                if (mesa.pedidos.length === 0) {
+                    ui.comandaVacia.classList.remove('hidden');
+                }
+
+                ui.comandaTotal.textContent = `$${total.toFixed(2)}`;
+                ui.btnCerrarCuenta.disabled = false;
+                
+                // Botón FAB mobile
+                ui.btnFab.innerHTML = `<span class="font-bold pl-2">$${total.toFixed(2)}</span> <i class="ph-bold ph-receipt text-2xl"></i>`;
+
+            } else {
+                // Sin mesa seleccionada
+                ui.comandaTitulo.textContent = 'Seleccione Mesa';
+                ui.comandaPax.textContent = '0';
+                
+                ui.comandaVacia.classList.remove('hidden');
+                Array.from(ui.comandaLista.children).forEach(hijo => {
+                    if(hijo.id !== 'comanda-vacia') hijo.remove();
+                });
+
+                ui.comandaTotal.textContent = '$0.00';
+                ui.btnCerrarCuenta.disabled = true;
+                ui.btnFab.innerHTML = `<i class="ph-bold ph-receipt text-2xl"></i>`;
+            }
+        }
+
+
+        // Cerrar Cuenta (Acción destructiva - color Terracotta aplicado en HTML)
+        ui.btnCerrarCuenta.addEventListener('click', () => {
+            if (!mesaActivaId) return;
+            const mesa = mesas.find(m => m.id === mesaActivaId);
+            
+            // Simular carga
+            const textoOriginal = ui.btnCerrarCuenta.innerHTML;
+            ui.btnCerrarCuenta.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-xl"></i> Procesando...`;
+            
+            setTimeout(() => {
+                mesa.estado = 'libre'; // Vuelve a color Sage
+                mesa.pax = 0;
+                mesa.pedidos = [];
+                mesaActivaId = null;
+                
+                ui.btnCerrarCuenta.innerHTML = textoOriginal;
+                cerrarPanelMobile();
+                actualizarInterfaz();
+            }, 600);
+        });
+
+        // Lógica del Modal de Pax
+        function abrirModal() {
+            ui.modalPax.classList.remove('hidden');
+            setTimeout(() => {
+                ui.modalPax.classList.remove('opacity-0');
+                ui.modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cerrarModal() {
+            ui.modalPax.classList.add('opacity-0');
+            ui.modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                ui.modalPax.classList.add('hidden');
+                mesaPorAbrir = null;
+            }, 200);
+        }
+
+        ui.btnPaxMenos.onclick = () => { if(paxActual > 1) { paxActual--; ui.paxContador.textContent = paxActual; } };
+        ui.btnPaxMas.onclick = () => { if(paxActual < 15) { paxActual++; ui.paxContador.textContent = paxActual; } };
+        ui.btnCancelarPax.onclick = cerrarModal;
+        
+        ui.btnConfirmarPax.onclick = () => {
+            if (mesaPorAbrir) {
+                const mesa = mesas.find(m => m.id === mesaPorAbrir);
+                mesa.estado = 'ocupada'; // Pasa a color Terracotta
+                mesa.pax = paxActual;
+                mesaActivaId = mesa.id; // Auto-selecciona la mesa
+                
+                cerrarModal();
+                actualizarInterfaz();
+                abrirPanelMobile();
+            }
+        };
+
+        // Lógica Panel Mobile (Bottom Sheet)
+        let panelAbierto = false;
+        
+        function abrirPanelMobile() {
+            if (window.innerWidth < 1024) { // Menor que LG
+                ui.panelComanda.classList.remove('translate-y-full');
+                ui.panelComanda.classList.add('translate-y-0');
+                panelAbierto = true;
+            }
+        }
+
+        function cerrarPanelMobile() {
+            if (window.innerWidth < 1024) {
+                ui.panelComanda.classList.add('translate-y-full');
+                ui.panelComanda.classList.remove('translate-y-0');
+                panelAbierto = false;
+            }
+        }
+
+        ui.btnFab.onclick = () => {
+            if (panelAbierto) cerrarPanelMobile();
+            else abrirPanelMobile();
+        };
+
+        ui.btnTogglePanel.onclick = cerrarPanelMobile;
+
+        // Reloj en tiempo real
+        setInterval(() => {
+            const ahora = new Date();
+            ui.reloj.textContent = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }, 1000);
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarProductos();
+            actualizarInterfaz();
+        });
+
+    </script>
+</body>
+</html>
